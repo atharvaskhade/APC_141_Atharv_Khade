@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="AutoWise – India's smartest car ownership cost calculator. Estimate annual fuel, insurance, servicing, PUC, tyre, and repair costs.">
+    <title>AutoWise | Car Ownership Cost Calculator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚗</text></svg>">
+</head>
+<body>
+
+<!-- ── Navbar ── -->
+<header>
+    <nav class="navbar">
+        <div class="navbar-inner">
+            <a href="/" class="navbar-brand" aria-label="AutoWise home">
+                <span class="brand-icon" aria-hidden="true">A</span>
+                <span class="brand-text">AutoWise</span>
+            </a>
+            <div class="navbar-links">
+                <a href="/" class="active" id="nav-calc">Calculator</a>
+                <a href="/history" id="nav-history">History</a>
+            </div>
+        </div>
+    </nav>
+</header>
+
+<!-- ── Flash Messages ── -->
+{% with messages = get_flashed_messages() %}
+{% if messages %}
+<div class="flash-container" id="flash-container">
+    {% for message in messages %}
+    <div class="flash flash-error" id="flash-msg-{{ loop.index }}">
+        <span>⚠️</span>
+        <span>{{ message }}</span>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endwith %}
+
+<!-- ── Page ── -->
+<main>
+    <div class="page-wrapper">
+
+        <div class="page-wordmark" aria-label="AutoWise">AUTOWISE</div>
+
+        <section class="page-intro" aria-labelledby="page-title">
+            <div class="intro-copy">
+                <span class="intro-eyebrow"><span class="hero-badge-dot"></span> CAR OWNERSHIP, MADE CLEAR</span>
+                <h1 id="page-title">Know what your car costs to <span>run.</span></h1>
+                <p>Plan beyond the purchase price. Get a practical annual estimate for the costs that come with every drive.</p>
+            </div>
+            <aside class="intro-visual" aria-label="AutoWise helps you plan car ownership costs">
+                <div class="intro-visual-art">
+                    <img src="{{ url_for('static', filename='autowise-outline.webp') }}" alt="">
+                </div>
+                <div class="intro-visual-caption">
+                    <span>YOUR YEAR, AT A GLANCE</span>
+                    <strong>More clarity for every kilometre.</strong>
+                </div>
+            </aside>
+        </section>
+
+        <!-- Main Card -->
+        <div class="card">
+            <div class="estimate-heading">
+                <div>
+                    <span class="estimate-kicker">PERSONAL COST ESTIMATE</span>
+                    <h2>Let’s get your numbers</h2>
+                </div>
+                <span class="estimate-note"><span class="status-dot"></span> Takes about a minute</span>
+            </div>
+
+            <form action="/calculate" method="POST" id="costForm" novalidate>
+                <input type="hidden" name="brand"   id="hid_brand">
+                <input type="hidden" name="model"   id="hid_model">
+                <input type="hidden" name="variant" id="hid_variant">
+
+                <!-- Car Search -->
+                <h2 class="form-section-heading"><span>01</span> Choose your car</h2>
+                <div class="form-group">
+                    <label for="car_search">SEARCH VEHICLE</label>
+                    <div class="search-wrapper">
+                        <div class="input-wrapper">
+                            <span class="input-icon">🔍</span>
+                            <input type="text"
+                                   id="car_search"
+                                   class="has-icon"
+                                   placeholder="e.g. Hyundai Creta or Maruti Swift"
+                                   autocomplete="off"
+                                   spellcheck="false">
+                            <button type="button" class="search-clear" id="search_clear" title="Clear">✕</button>
+                        </div>
+                        <div class="car-dropdown" id="car_dropdown" role="listbox">
+                            <div class="no-results" id="no_results">No cars matched your search.</div>
+                        </div>
+                    </div>
+                    <!-- Selected chip -->
+                    <div class="selected-chip" id="selected_chip">
+                        <span>✅</span>
+                        <span id="selected_chip_text"></span>
+                        <button type="button" class="selected-chip-clear" id="chip_clear" title="Change car">✕</button>
+                    </div>
+                </div>
+
+                <!-- Variant Selector -->
+                <div class="variant-section" id="variant_section">
+                    <label>Choose Variant</label>
+                    <div class="variant-grid" id="variant_grid"></div>
+                </div>
+
+                <h2 class="form-section-heading"><span>02</span> Your driving details</h2>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="annual_km">Annual Distance</label>
+                        <div class="input-wrapper">
+                            <span class="input-icon">🛣️</span>
+                            <input type="number" id="annual_km" name="annual_km"
+                                   class="has-icon"
+                                   min="1" max="500000" step="500"
+                                   placeholder="e.g. 12000"
+                                   value="{{ result.annual_km if result else '' }}"
+                                   required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="fuel_price">Fuel Price (₹ / litre)</label>
+                        <div class="input-wrapper">
+                            <span class="input-icon">⛽</span>
+                            <input type="number" id="fuel_price" name="fuel_price"
+                                   class="has-icon"
+                                   min="1" step="0.01"
+                                   placeholder="e.g. 103.45"
+                                   value="{{ result.fuel_price if result else '' }}"
+                                   required>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary" id="submit-btn">
+                    <span id="btn-icon">⚡</span>
+                    <span id="btn-text">Calculate Annual Cost</span>
+                </button>
+                <a href="/history" class="btn btn-secondary" id="history-link">📋 View History</a>
+            </form>
+
+            <!-- ═══════════════════════════════════
+                 RESULT PANEL — matches screenshot
+            ═══════════════════════════════════ -->
+            {% if result %}
+            <div class="result-panel" id="result_panel">
+                <div class="result-divider"></div>
+
+                <!-- Report Card — matching screenshot exactly -->
+                <div class="report-card">
+                    <h2 class="report-title">Annual Cost Report</h2>
+                    <p class="report-subtitle">Estimated cost for: <strong>{{ result.car_name }}</strong></p>
+
+                    <div class="cost-table">
+                        <div class="cost-row">
+                            <div class="cost-row-label">
+                                <div class="cost-row-icon icon-fuel">⛽</div>
+                                Fuel Cost
+                            </div>
+                            <div class="cost-row-amount">₹{{ "{:,.0f}".format(result.fuel_cost) }}</div>
+                        </div>
+                        <div class="cost-row">
+                            <div class="cost-row-label">
+                                <div class="cost-row-icon icon-insurance">🛡️</div>
+                                Insurance
+                            </div>
+                            <div class="cost-row-amount">₹{{ "{:,.0f}".format(result.insurance) }}</div>
+                        </div>
+                        <div class="cost-row">
+                            <div class="cost-row-label">
+                                <div class="cost-row-icon icon-service">🔧</div>
+                                Servicing
+                            </div>
+                            <div class="cost-row-amount">₹{{ "{:,.0f}".format(result.servicing) }}</div>
+                        </div>
+                        <div class="cost-row">
+                            <div class="cost-row-label">
+                                <div class="cost-row-icon icon-puc">📋</div>
+                                PUC (Annual)
+                            </div>
+                            <div class="cost-row-amount">₹{{ "{:,.0f}".format(result.puc) }}</div>
+                        </div>
+                        {% if result.tyre_replacement_applicable %}
+                        <div class="cost-row">
+                            <div class="cost-row-label">
+                                <div class="cost-row-icon icon-tyre">🔄</div>
+                                Tyre Replacement
+                            </div>
+                            <div class="cost-row-amount">₹{{ "{:,.0f}".format(result.tyre_replacement) }}</div>
+                        </div>
+                        {% endif %}
+                        <div class="cost-row">
+                            <div class="cost-row-label">
+                                <div class="cost-row-icon icon-repairs">🔩</div>
+                                Repairs
+                            </div>
+                            <div class="cost-row-amount">₹{{ "{:,.0f}".format(result.repairs) }}</div>
+                        </div>
+                    </div>
+
+                    <!-- Total -->
+                    <div class="total-row">
+                        <div class="total-row-label">🏆 Total Annual Ownership Cost</div>
+                        <div class="total-row-value">₹{{ "{:,.0f}".format(result.total_cost) }}</div>
+                    </div>
+
+                    {% if result.mileage_is_estimated %}
+                    <p class="result-note">
+                        ⚠️ ARAI mileage wasn't listed for this variant, so fuel cost uses available variant, model, or similar-vehicle mileage as an estimate.
+                    </p>
+                    {% endif %}
+                    {% if result.tyre_replacement_applicable %}
+                    {% endif %}
+                </div><!-- .report-card -->
+            </div><!-- .result-panel -->
+
+            <!-- Result data for JS chart rendering -->
+            <script id="result_data" type="application/json">
+            {
+                "fuel_cost":        {{ result.fuel_cost }},
+                "insurance":        {{ result.insurance }},
+                "servicing":        {{ result.servicing }},
+                "puc":              {{ result.puc }},
+                "tyre_replacement": {{ result.tyre_replacement }},
+                "tyre_replacement_applicable": {{ result.tyre_replacement_applicable | tojson }},
+                "repairs":          {{ result.repairs }},
+                "total_cost":       {{ result.total_cost }}
+            }
+            </script>
+            {% endif %}
+
+        </div><!-- .card -->
+    </div><!-- .page-wrapper -->
+</main>
+
+<!-- Pass all car data to JS -->
+<script id="cars_data" type="application/json">{{ cars | tojson }}</script>
+
+<footer>
+    <strong>AutoWise</strong> — Smart Car Ownership Cost Estimator &nbsp;|&nbsp;
+    Built with Python &amp; Flask &nbsp;|&nbsp; © 2025
+</footer>
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

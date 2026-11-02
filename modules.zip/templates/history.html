@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="AutoWise – View your saved car ownership cost calculations.">
+    <title>AutoWise | Calculation History</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚗</text></svg>">
+</head>
+<body>
+
+<!-- ── Navbar ── -->
+<header>
+    <nav class="navbar">
+        <div class="navbar-inner">
+            <a href="/" class="navbar-brand" aria-label="AutoWise home">
+                <span class="brand-icon" aria-hidden="true">A</span>
+                <span class="brand-text">AutoWise</span>
+            </a>
+            <div class="navbar-links">
+                <a href="/" id="nav-calc">Calculator</a>
+                <a href="/history" class="active" id="nav-history">History</a>
+            </div>
+        </div>
+    </nav>
+</header>
+
+<!-- ── Flash Messages ── -->
+{% with messages = get_flashed_messages() %}
+{% if messages %}
+<div class="flash-container" id="flash-container">
+    {% for message in messages %}
+    <div class="flash flash-success" id="flash-msg-{{ loop.index }}">
+        <span>✅</span>
+        <span>{{ message }}</span>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endwith %}
+
+<!-- ── Page ── -->
+<main>
+    <div class="page-wrapper wide">
+
+        <!-- Header -->
+        <div class="history-header">
+            <div>
+                <span class="hero-badge"><span class="hero-badge-dot"></span> YOUR GARAGE, IN NUMBERS</span>
+                <h1>Cost reports</h1>
+                <p class="history-intro">Every saved estimate, all in one place.</p>
+            </div>
+            <div class="history-actions">
+                <a href="/" class="btn btn-secondary btn-sm" id="back-btn">← Back to Calculator</a>
+                {% if searches %}
+                <form action="/clear-history" method="POST"
+                      onsubmit="return confirm('Delete all calculation history? This cannot be undone.');">
+                    <button class="btn btn-danger btn-sm" type="submit" id="clear-btn">🗑️ Clear All</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if searches %}
+
+        {% for row in searches %}
+        <section class="report-card history-report-card" id="history-{{ row['id'] }}">
+            <h2 class="report-title">Annual Cost Report</h2>
+            <p class="report-subtitle">Estimated cost for: <strong>{{ row['car_name'] }}</strong></p>
+            <p class="history-report-meta">
+                {{ row['fuel_type'] or 'Fuel type unavailable' }} ·
+                {{ "{:,.0f}".format(row['annual_km'] or 0) }} km/year ·
+                {{ row['mileage'] or '—' }}
+                {{ 'km/kg' if 'cng' in (row['fuel_type'] or '').lower() else 'km/l' }}
+            </p>
+
+            <div class="cost-table">
+                <div class="cost-row">
+                    <div class="cost-row-label">
+                        <div class="cost-row-icon icon-fuel">⛽</div>
+                        Fuel Cost
+                    </div>
+                    <div class="cost-row-amount">₹{{ "{:,.0f}".format(row['fuel_cost'] or 0) }}</div>
+                </div>
+                <div class="cost-row">
+                    <div class="cost-row-label">
+                        <div class="cost-row-icon icon-insurance">🛡️</div>
+                        Insurance
+                    </div>
+                    <div class="cost-row-amount">₹{{ "{:,.0f}".format(row['insurance'] or 0) }}</div>
+                </div>
+                <div class="cost-row">
+                    <div class="cost-row-label">
+                        <div class="cost-row-icon icon-service">🔧</div>
+                        Servicing
+                    </div>
+                    <div class="cost-row-amount">₹{{ "{:,.0f}".format(row['servicing'] or 0) }}</div>
+                </div>
+                <div class="cost-row">
+                    <div class="cost-row-label">
+                        <div class="cost-row-icon icon-puc">📋</div>
+                        PUC (Annual)
+                    </div>
+                    <div class="cost-row-amount">₹{{ "{:,.0f}".format(row['puc'] or 0) }}</div>
+                </div>
+                {% if row['tyre_replacement_applicable'] %}
+                <div class="cost-row">
+                    <div class="cost-row-label">
+                        <div class="cost-row-icon icon-tyre">🔄</div>
+                        Tyre Replacement
+                    </div>
+                    <div class="cost-row-amount">₹{{ "{:,.0f}".format(row['tyre_replacement'] or 0) }}</div>
+                </div>
+                {% endif %}
+                <div class="cost-row">
+                    <div class="cost-row-label">
+                        <div class="cost-row-icon icon-repairs">🔩</div>
+                        Repairs
+                    </div>
+                    <div class="cost-row-amount">₹{{ "{:,.0f}".format(row['repairs'] or 0) }}</div>
+                </div>
+            </div>
+
+            <div class="total-row">
+                <div class="total-row-label">🏆 Total Annual Ownership Cost</div>
+                <div class="total-row-value">₹{{ "{:,.0f}".format(row['total_cost'] or 0) }}</div>
+            </div>
+        </section>
+        {% endfor %}
+
+        {% else %}
+        <!-- Empty State -->
+        <div class="card">
+            <div class="empty-state">
+                <div class="empty-icon">📭</div>
+                <p>No calculations saved yet.<br>
+                   <span style="color:var(--text-muted);font-size:13px;">Start by calculating the annual cost of your car.</span>
+                </p>
+                <a href="/" class="btn btn-primary" style="width:auto;display:inline-flex;" id="go-calc-btn">
+                    ⚡ Go to Calculator
+                </a>
+            </div>
+        </div>
+        {% endif %}
+
+    </div><!-- .page-wrapper -->
+</main>
+
+<footer>
+    <strong>AutoWise</strong> — Smart Car Ownership Cost Estimator &nbsp;|&nbsp;
+    Built with Python &amp; Flask &nbsp;|&nbsp; © 2025
+</footer>
+</body>
+</html>
